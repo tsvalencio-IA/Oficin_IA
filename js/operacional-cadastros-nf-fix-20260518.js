@@ -272,6 +272,9 @@
   }
 
   function collectItensNFEdit() {
+    if (typeof W.thiaNFCollectItens === 'function') {
+      try { return W.thiaNFCollectItens(); } catch (e) { toast(e.message || String(e), 'warn'); return []; }
+    }
     return Array.from(D.querySelectorAll('#containerItensNF .nf-real-row')).map(row => {
       let base = {};
       try { base = JSON.parse(row.querySelector('.nf-json')?.value || '{}'); } catch (_) { base = {}; }
@@ -316,7 +319,7 @@
   function resumoDiffItensNF(antes, depois) {
     const a = Array.isArray(antes) ? antes : [];
     const d = Array.isArray(depois) ? depois : [];
-    const campos = ['codigoFornecedor','codigoComercial','codigo','oem','descricao','marca','quantidade','valorUnitario','desconto','venda','ean','ncm','cfop','cest','destino','finalidade','osId','placa','vinculo'];
+    const campos = ['codigoFornecedor','codigoComercial','codigo','oem','descricao','marca','quantidade','quantidadeFiscal','quantidadeOperacional','fatorOperacional','valorUnitario','desconto','venda','ean','ncm','cfop','cest','destino','finalidade','osId','placa','vinculo','destinosOperacionais','destinos'];
     const mapA = new Map(a.map((it, idx) => [itemKeyNF(it, idx), it]));
     const mapD = new Map(d.map((it, idx) => [itemKeyNF(it, idx), it]));
     const excluidos = [];
@@ -326,7 +329,13 @@
     mapD.forEach((it, key) => {
       if (!mapA.has(key)) { incluidos.push(it); return; }
       const old = mapA.get(key);
-      const mudou = campos.some(c => String(old?.[c] ?? '') !== String(it?.[c] ?? ''));
+      const mudou = campos.some(c => {
+        const a = old?.[c];
+        const b = it?.[c];
+        const sa = (a && typeof a === 'object') ? JSON.stringify(a) : String(a ?? '');
+        const sb = (b && typeof b === 'object') ? JSON.stringify(b) : String(b ?? '');
+        return sa !== sb;
+      });
       if (mudou) alterados.push({ antes: old, depois: it });
     });
     return { excluidos, incluidos, alterados };
